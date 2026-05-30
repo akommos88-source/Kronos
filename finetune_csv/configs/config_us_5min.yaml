@@ -1,0 +1,84 @@
+# Kronos fine-tuning config for US equities, 5-minute bars
+# Generated for use with finetune_tokenizer.py + finetune_base_model.py
+
+data:
+  # Path to the CSV produced by fetch_us_data.py
+  # Override with --data_path or set here directly.
+  data_path: "data/us_5min.csv"
+
+  # How many past bars the model sees as context (max 512)
+  lookback_window: 200
+
+  # How many future bars are in each training sample
+  predict_window: 20
+
+  # Must match Kronos max_context (don't change)
+  max_context: 512
+
+  # Clip normalised values beyond this range (same as pretrain)
+  clip: 5.0
+
+  # Chronological split — no shuffling across time boundaries
+  train_ratio: 0.80
+  val_ratio:   0.10
+  test_ratio:  0.10
+
+training:
+  # Tokenizer: fine-tune the VQ-VAE encoder/decoder on US price distributions
+  tokenizer_epochs: 20
+
+  # Predictor: fine-tune the autoregressive Transformer
+  basemodel_epochs: 15
+
+  # Reduce batch_size if you hit OOM on CPU/MPS
+  batch_size: 16
+
+  log_interval: 50
+  num_workers: 2
+  seed: 42
+
+  # Tokenizer LR — slightly lower than default to preserve pretrained codebook
+  tokenizer_learning_rate: 0.0001
+
+  # Predictor LR — keep small to avoid catastrophic forgetting
+  predictor_learning_rate: 0.000004
+
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_weight_decay: 0.1
+
+  accumulation_steps: 2   # effective batch = batch_size * accumulation_steps
+
+model_paths:
+  # HuggingFace Hub IDs (downloaded and cached on first run)
+  # or local absolute paths if you've already downloaded them
+  pretrained_tokenizer: "NeoQuasar/Kronos-Tokenizer-base"
+  pretrained_predictor:  "NeoQuasar/Kronos-small"
+
+  exp_name:   "us_5min_finetune"
+  base_path:  "finetuned"
+
+  # Leave empty — auto-generated as {base_path}/{exp_name}/...
+  base_save_path:      ""
+  finetuned_tokenizer: ""
+
+  tokenizer_save_name: "tokenizer"
+  basemodel_save_name: "basemodel"
+
+experiment:
+  name:        "kronos_us_5min"
+  description: "Fine-tune Kronos on US equity 5-min OHLCV data"
+  use_comet:   false
+
+  # Set either to false to skip that stage (e.g. if tokenizer already trained)
+  train_tokenizer: true
+  train_basemodel: true
+  skip_existing:   false
+
+  # Start from pretrained weights (recommended — keeps global knowledge)
+  pre_trained_tokenizer: true
+  pre_trained_predictor: true
+
+device:
+  use_cuda:  true
+  device_id: 0
